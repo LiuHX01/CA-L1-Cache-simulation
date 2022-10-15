@@ -31,10 +31,11 @@ class Cache {
     int WBWA;
     int WTNA;
 
-    int r_count;
-    int r_miss_count;
-    int w_count;
-    int w_miss_count;
+    unsigned int r_count;
+    unsigned int r_miss_count;
+    unsigned int w_count;
+    unsigned int w_miss_count;
+    unsigned int wb_count;
 
     bool DEBUG;
 
@@ -49,4 +50,7 @@ class Cache {
     string dec2Hex(unsigned int x);
     void printCache();
     void printSingleSet(unsigned int index);
+    void printHead();
+    void printResult();
+    void printPResult();
 };
