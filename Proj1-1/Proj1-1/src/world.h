@@ -31,11 +31,11 @@ class Cache {
     int WBWA;
     int WTNA;
 
-    unsigned int r_count;
-    unsigned int r_miss_count;
-    unsigned int w_count;
-    unsigned int w_miss_count;
-    unsigned int wb_count;
+    double r_count;
+    double r_miss_count;
+    double w_count;
+    double w_miss_count;
+    double wb_count;
 
     bool DEBUG;
 

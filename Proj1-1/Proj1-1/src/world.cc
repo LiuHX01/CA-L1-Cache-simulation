@@ -56,11 +56,11 @@ Cache::Cache(int bsize, int size, int assoc, int repolicy, int wpolicy) {
 
 
     // 统计量
-    r_count = 0;
-    r_miss_count = 0;
-    w_count = 0;
-    w_miss_count = 0;
-    wb_count = 0;
+    r_count = 0.0;
+    r_miss_count = 0.0;
+    w_count = 0.0;
+    w_miss_count = 0.0;
+    wb_count = 0.0;
 
 
     // debug用
@@ -106,6 +106,11 @@ void Cache::read(unsigned int addr) {
         // 更新内容 设置valid
         L1_set[index][miss_hit.second] = tag;
         L1_state[index][miss_hit.second][VALID] = 1;
+        if (L1_state[index][miss_hit.second][DIRTY] == 1) {
+            wb_count++;
+        }
+        L1_state[index][miss_hit.second][DIRTY] = 0;
+
 
         if (L1_REPLACEMENT_POLICY == LRU) {
             for (int i = 0; i < L1_ASSOC; i++) {  // 设置计数器 自己清零 其他被占用的都+1
@@ -127,7 +132,6 @@ void Cache::read(unsigned int addr) {
             }
             L1_state[index][miss_hit.second][COUNT_BLOCK] = L1_state[index][miss_hit.second][COUNT_SET] + 1;
         }
-        L1_state[index][miss_hit.second][DIRTY] = 0;
     }
 
     return;
@@ -170,7 +174,6 @@ void Cache::write(unsigned int addr) {
 
             bool have_replace = false;
             if (miss_hit.second == L1_ASSOC) {  // 无空位
-                wb_count++;
                 have_replace = true;
                 miss_hit.second = selectReplaced(index);
             }
@@ -178,6 +181,10 @@ void Cache::write(unsigned int addr) {
             // 更新内容 设置valid
             L1_set[index][miss_hit.second] = tag;
             L1_state[index][miss_hit.second][VALID] = 1;
+
+            if (L1_state[index][miss_hit.second][DIRTY] == 1) {
+                wb_count++;
+            }
 
             // 设置计数器 自己清零 其他都+1
             if (L1_REPLACEMENT_POLICY == LRU) {
@@ -365,30 +372,30 @@ void Cache::printResult() {
 
     cout << "  ====== Simulation results (raw) ======" << endl;
     cout << "  a. number of L1 reads:";
-    cout << setiosflags(ios::right) << setw(16) << r_count << endl;
+    cout << setiosflags(ios::right) << setw(16) << int(r_count) << endl;
     cout << "  b. number of L1 read misses:";
-    cout << setiosflags(ios::right) << setw(10) << r_miss_count << endl;
+    cout << setiosflags(ios::right) << setw(10) << int(r_miss_count) << endl;
     cout << "  c. number of L1 writes:";
-    cout << setiosflags(ios::right) << setw(15) << w_count << endl;
+    cout << setiosflags(ios::right) << setw(15) << int(w_count) << endl;
     cout << "  d. number of L1 write misses:";
-    cout << setiosflags(ios::right) << setw(9) << w_miss_count << endl;
+    cout << setiosflags(ios::right) << setw(9) << int(w_miss_count) << endl;
     cout << "  e. L1 miss rate:";
-    cout << setiosflags(ios::right) << setw(22) << setprecision(4) << miss_rate << endl;
+    cout << setiosflags(ios::right) << setw(22) << fixed << setprecision(4) << miss_rate << endl;
     cout << "  f. number of writebacks from L1:";
-    cout << setiosflags(ios::right) << setw(6) << wb_count << endl;
+    cout << setiosflags(ios::right) << setw(6) << int(wb_count) << endl;
     cout << "  g. total memory traffic:";
     cout << setiosflags(ios::right) << setw(14) << traffic << endl;
 }
 
 
 void Cache::printPResult() {
-    double HT1 = 0.25 + 2.5 * (L1_SIZE / 512 / 1024) + 0.025 * (L1_BLOCKSIZE / 16) + 0.025 * L1_ASSOC;
-    double MP1 = 20 + 0.5 * (L1_BLOCKSIZE / 16);
+    double HT1 = 0.25 + 2.5 * (L1_SIZE / 512.0 / 1024.0) + 0.025 * (L1_BLOCKSIZE / 16.0) + 0.025 * L1_ASSOC;
+    double MP1 = 20.0 + 0.5 * (L1_BLOCKSIZE / 16.0);
     double miss_rate = (r_miss_count + w_miss_count) / (r_count + w_count);
     double AAT = HT1 + (MP1 * miss_rate);
 
     cout << "  ==== Simulation results (performance) ====" << endl;
     cout << "  1. average access time:";
-    cout << setiosflags(ios::right) << setw(15) << setprecision(4) << AAT;
-    cout << " ns" << endl;
+    cout << setiosflags(ios::right) << setw(15) << fixed << setprecision(4) << AAT;
+    cout << " ns";
 }

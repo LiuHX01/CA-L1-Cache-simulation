@@ -41,7 +41,6 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // MyCache.printCache();
     MyCache.printHead();
     cout << "  trace_file:";
     cout << setiosflags(ios::right) << setw(24) << o_file_name << endl;
