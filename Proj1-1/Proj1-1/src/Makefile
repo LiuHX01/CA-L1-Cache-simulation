@@ -43,3 +43,16 @@ clobber:
 	rm -f *.o
 
 
+test:
+	make clean
+	make all
+	./sim_cache 16 16384 1 0 0 gcc_trace>o1
+	diff -iw o1 ../validation/ValidationRun1.txt
+	./sim_cache 128 2048 8 0 1 go_trace>o2
+	diff -iw o2 ../validation/ValidationRun2.txt
+	./sim_cache 32 4096 4 0 1 perl_trace>o3
+	diff -iw o3 ../validation/ValidationRun3.txt
+	./sim_cache 64 8192 2 1 0 gcc_trace>o4
+	diff -iw o4 ../validation/ValidationRun4.txt
+	./sim_cache 32 1024 4 1 1 go_trace>o5
+	diff -iw o5 ../validation/ValidationRun5.txt
