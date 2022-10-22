@@ -5,31 +5,31 @@ using namespace std;
 
 class Cache {
   private:
-    int L1_BLOCKSIZE;
-    int L1_SIZE;
-    int L1_ASSOC;
-    int L1_REPLACEMENT_POLICY;
-    int L1_WRITE_POLICY;
+    unsigned int L1_BLOCKSIZE;
+    unsigned int L1_SIZE;
+    unsigned int L1_ASSOC;
+    unsigned int L1_REPLACEMENT_POLICY;
+    unsigned int L1_WRITE_POLICY;
 
-    int L1_BLOCK_COUNT;
-    int L1_GROUP_COUNT;
+    unsigned int L1_BLOCK_COUNT;
+    unsigned int L1_GROUP_COUNT;
 
-    int L1_TAG_BITCOUNT;        // 高
-    int L1_GROUP_BITCOUNT;      // 中
-    int L1_BLOCKSIZE_BITCOUNT;  // 低
+    unsigned int L1_TAG_BITCOUNT;        // 高
+    unsigned int L1_GROUP_BITCOUNT;      // 中
+    unsigned int L1_BLOCKSIZE_BITCOUNT;  // 低
 
     unsigned int L1_set[1024][8];
     unsigned int L1_state[1024][8][4];
 
-    int VALID;  // 0可用 1占用
-    int DIRTY;  // 0不脏 1脏
-    int COUNT_BLOCK;
-    int COUNT_SET;
+    unsigned int VALID;  // 0可用 1占用
+    unsigned int DIRTY;  // 0不脏 1脏
+    unsigned int COUNT_BLOCK;
+    unsigned int COUNT_SET;
 
-    int LRU;
-    int LFU;
-    int WBWA;
-    int WTNA;
+    unsigned int LRU;
+    unsigned int LFU;
+    unsigned int WBWA;
+    unsigned int WTNA;
 
     double r_count;
     double r_miss_count;

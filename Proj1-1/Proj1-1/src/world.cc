@@ -82,7 +82,7 @@ void Cache::read(unsigned int addr) {
         L1_set[index][miss_hit.second] = tag;  // 更新内容
 
         if (L1_REPLACEMENT_POLICY == LRU) {
-            for (int i = 0; i < L1_ASSOC; i++) {  // 设置计数器 自己清零 其他被占用且比他小的+1
+            for (unsigned int i = 0; i < L1_ASSOC; i++) {  // 设置计数器 自己清零 其他被占用且比他小的+1
                 if (L1_state[index][i][VALID] == 1 && L1_state[index][i][COUNT_BLOCK] < L1_state[index][miss_hit.second][COUNT_BLOCK]) {
                     L1_state[index][i][COUNT_BLOCK]++;
                 }
@@ -113,7 +113,7 @@ void Cache::read(unsigned int addr) {
 
 
         if (L1_REPLACEMENT_POLICY == LRU) {
-            for (int i = 0; i < L1_ASSOC; i++) {  // 设置计数器 自己清零 其他被占用的都+1
+            for (unsigned int i = 0; i < L1_ASSOC; i++) {  // 设置计数器 自己清零 其他被占用的都+1
                 if (i != miss_hit.second && L1_state[index][i][VALID] == 1) {
                     L1_state[index][i][COUNT_BLOCK]++;
                 }
@@ -126,7 +126,7 @@ void Cache::read(unsigned int addr) {
             // L1_state[index][miss_hit.second][COUNT_BLOCK] = L1_state[index][miss_hit.second][COUNT_SET] + 1;
             // 如果有替换 该组COUNT_SET被设置为被替换块的COUNT_BLOCK
             if (have_replace) {
-                for (int i = 0; i < L1_ASSOC; i++) {
+                for (unsigned int i = 0; i < L1_ASSOC; i++) {
                     L1_state[index][i][COUNT_SET] = tmp;
                 }
             }
@@ -152,7 +152,7 @@ void Cache::write(unsigned int addr) {
         L1_set[index][miss_hit.second] = tag;  // 更新内容
 
         if (L1_REPLACEMENT_POLICY == LRU) {  // 设置计数器 自己清零 比他小的+1
-            for (int i = 0; i < L1_ASSOC; i++) {
+            for (unsigned int i = 0; i < L1_ASSOC; i++) {
                 if (L1_state[index][i][VALID] == 1 && L1_state[index][i][COUNT_BLOCK] < L1_state[index][miss_hit.second][COUNT_BLOCK]) {
                     L1_state[index][i][COUNT_BLOCK]++;
                 }
@@ -188,7 +188,7 @@ void Cache::write(unsigned int addr) {
 
             // 设置计数器 自己清零 其他都+1
             if (L1_REPLACEMENT_POLICY == LRU) {
-                for (int i = 0; i < L1_ASSOC; i++) {
+                for (unsigned int i = 0; i < L1_ASSOC; i++) {
                     if (i != miss_hit.second && L1_state[index][i][VALID] == 1) {
                         L1_state[index][i][COUNT_BLOCK]++;
                     }
@@ -201,7 +201,7 @@ void Cache::write(unsigned int addr) {
                 // L1_state[index][miss_hit.second][COUNT_BLOCK] = L1_state[index][miss_hit.second][COUNT_SET] + 1;
                 // 如果有替换 该组COUNT_SET被设置为被替换块的COUNT_BLOCK
                 if (have_replace) {
-                    for (int i = 0; i < L1_ASSOC; i++) {
+                    for (unsigned int i = 0; i < L1_ASSOC; i++) {
                         L1_state[index][i][COUNT_SET] = tmp;
                     }
                 }
@@ -220,11 +220,11 @@ void Cache::write(unsigned int addr) {
 // 得到组号
 unsigned int Cache::getIndex(unsigned int addr) {
     unsigned int ret = 0;
-    for (int i = 0; i < L1_BLOCKSIZE_BITCOUNT; i++) {
+    for (unsigned int i = 0; i < L1_BLOCKSIZE_BITCOUNT; i++) {
         addr >>= 1;
     }
     int w = 1;
-    for (int i = 0; i < L1_GROUP_BITCOUNT; i++) {
+    for (unsigned int i = 0; i < L1_GROUP_BITCOUNT; i++) {
         ret += w * (addr & 1);
         w *= 2;
         addr >>= 1;
@@ -237,11 +237,11 @@ unsigned int Cache::getIndex(unsigned int addr) {
 // 得到tag(内容)
 unsigned int Cache::getTag(unsigned int addr) {
     unsigned int ret = 0;
-    for (int i = 0; i < L1_BLOCKSIZE_BITCOUNT + L1_GROUP_BITCOUNT; i++) {
+    for (unsigned int i = 0; i < L1_BLOCKSIZE_BITCOUNT + L1_GROUP_BITCOUNT; i++) {
         addr >>= 1;
     }
     int w = 1;
-    for (int i = 0; i < L1_TAG_BITCOUNT; i++) {
+    for (unsigned int i = 0; i < L1_TAG_BITCOUNT; i++) {
         ret += w * (addr & 1);
         w *= 2;
         addr >>= 1;
@@ -255,7 +255,7 @@ unsigned int Cache::getTag(unsigned int addr) {
 std::pair<bool, unsigned int> Cache::missOrHit(unsigned int index, unsigned int tag) {
     std::pair<bool, unsigned int> ret(false, L1_ASSOC);
     // 对比该组每个块
-    for (int i = 0; i < L1_ASSOC; i++) {
+    for (unsigned int i = 0; i < L1_ASSOC; i++) {
         if (L1_state[index][i][0] == 0) {  // 首先valid 记录第一个空位
             if (i < ret.second) {
                 ret.second = i;
@@ -278,7 +278,7 @@ unsigned int Cache::selectReplaced(unsigned int index) {
     unsigned int ret = 0;
     if (L1_REPLACEMENT_POLICY == LRU) {
         unsigned int count = 0;
-        for (int i = 0; i < L1_ASSOC; i++) {
+        for (unsigned int i = 0; i < L1_ASSOC; i++) {
             if (L1_state[index][i][COUNT_BLOCK] > count) {
                 count = L1_state[index][i][COUNT_BLOCK];
                 ret = i;
@@ -287,7 +287,7 @@ unsigned int Cache::selectReplaced(unsigned int index) {
     }
     else {
         unsigned int count = 0xffffffffu;
-        for (int i = 0; i < L1_ASSOC; i++) {
+        for (unsigned int i = 0; i < L1_ASSOC; i++) {
             if (L1_state[index][i][COUNT_BLOCK] < count) {
                 count = L1_state[index][i][COUNT_BLOCK];
                 ret = i;
@@ -316,7 +316,7 @@ string Cache::dec2Hex(unsigned int x) {
 
 
 void Cache::printCache() {
-    for (int setNum = 0; setNum < L1_GROUP_COUNT; setNum++) {
+    for (unsigned int setNum = 0; setNum < L1_GROUP_COUNT; setNum++) {
         printSingleSet(setNum);
     }
 }
@@ -325,7 +325,7 @@ void Cache::printCache() {
 void Cache::printSingleSet(unsigned int index) {
     cout << "set";
     cout << setiosflags(ios::right) << setw(4) << index << ":";
-    for (int i = 0; i < L1_ASSOC; i++) {
+    for (unsigned int i = 0; i < L1_ASSOC; i++) {
         if (L1_state[index][i][VALID] == 0) {
             cout << "-\t";
         }
