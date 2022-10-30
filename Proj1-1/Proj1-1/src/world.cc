@@ -9,37 +9,21 @@
 
 
 // 构造函数
-Cache::Cache(int bsize, int size, int assoc, int repolicy, int wpolicy) {
-    // 传入参数
-    L1_BLOCKSIZE = bsize;
-    L1_SIZE = size;
-    L1_ASSOC = assoc;
-    L1_REPLACEMENT_POLICY = repolicy;
-    L1_WRITE_POLICY = wpolicy;
-
-
-    // 计算位数 tag 组号 块内地址
-    L1_BLOCKSIZE_BITCOUNT = 0;
-    int temp = L1_BLOCKSIZE;
-    while (temp != 1) {
-        L1_BLOCKSIZE_BITCOUNT++;
-        temp >>= 1;
-    }
+Cache::Cache(int bsize, int size, int assoc, int repolicy, int wpolicy) :
+    L1_BLOCKSIZE(bsize), L1_SIZE(size), L1_ASSOC(assoc), L1_REPLACEMENT_POLICY(repolicy), L1_WRITE_POLICY(wpolicy) {
+    // 计算块内地址位数
+    L1_BLOCKSIZE_BIT_COUNT = calcBitCount(L1_BLOCKSIZE);
+    // 计算块数组数
     L1_BLOCK_COUNT = L1_SIZE / L1_BLOCKSIZE;
     L1_GROUP_COUNT = L1_BLOCK_COUNT / L1_ASSOC;
-    L1_GROUP_BITCOUNT = 0;
-    temp = L1_GROUP_COUNT;
-    while (temp != 1) {
-        L1_GROUP_BITCOUNT++;
-        temp >>= 1;
-    }
-    L1_TAG_BITCOUNT = 32 - L1_BLOCKSIZE_BITCOUNT - L1_GROUP_BITCOUNT;
+    // 计算组号位数
+    L1_GROUP_BIT_COUNT = calcBitCount(L1_GROUP_COUNT);
+    // 计算tag位数
+    L1_TAG_BIT_COUNT = 32 - L1_BLOCKSIZE_BIT_COUNT - L1_GROUP_BIT_COUNT;
 
-
-    // 初始化
+    // cache及其状态初始化
     memset(L1_set, 0, sizeof(L1_set));
     memset(L1_state, 0, sizeof(L1_state));
-
 
     // 统计量
     r_count = 0.0;
@@ -47,7 +31,6 @@ Cache::Cache(int bsize, int size, int assoc, int repolicy, int wpolicy) {
     w_count = 0.0;
     w_miss_count = 0.0;
     wb_count = 0.0;
-
 
     // debug用
     DEBUG = false;
@@ -95,7 +78,7 @@ void Cache::read(unsigned int addr) {
         if (L1_state[index][miss_hit.second][DIRTY_INDEX] == DIRTY) {
             wb_count++;
         }
-        L1_state[index][miss_hit.second][DIRTY_INDEX] = NODIRTY;
+        L1_state[index][miss_hit.second][DIRTY_INDEX] = NO_DIRTY;
 
 
         if (L1_REPLACEMENT_POLICY == LRU) {
@@ -203,14 +186,25 @@ void Cache::write(unsigned int addr) {
 }
 
 
+// 计算某十进制位数
+unsigned int Cache::calcBitCount(unsigned int x) {
+    unsigned int ret = 0;
+    while (x != 1) {
+        ret++;
+        x >>= 1;
+    }
+    return ret;
+}
+
+
 // 得到组号
 unsigned int Cache::getIndex(unsigned int addr) {
     unsigned int ret = 0;
-    for (unsigned int i = 0; i < L1_BLOCKSIZE_BITCOUNT; i++) {
+    for (unsigned int i = 0; i < L1_BLOCKSIZE_BIT_COUNT; i++) {
         addr >>= 1;
     }
     int w = 1;
-    for (unsigned int i = 0; i < L1_GROUP_BITCOUNT; i++) {
+    for (unsigned int i = 0; i < L1_GROUP_BIT_COUNT; i++) {
         ret += w * (addr & 1);
         w *= 2;
         addr >>= 1;
@@ -223,11 +217,11 @@ unsigned int Cache::getIndex(unsigned int addr) {
 // 得到tag(内容)
 unsigned int Cache::getTag(unsigned int addr) {
     unsigned int ret = 0;
-    for (unsigned int i = 0; i < L1_BLOCKSIZE_BITCOUNT + L1_GROUP_BITCOUNT; i++) {
+    for (unsigned int i = 0; i < L1_BLOCKSIZE_BIT_COUNT + L1_GROUP_BIT_COUNT; i++) {
         addr >>= 1;
     }
     int w = 1;
-    for (unsigned int i = 0; i < L1_TAG_BITCOUNT; i++) {
+    for (unsigned int i = 0; i < L1_TAG_BIT_COUNT; i++) {
         ret += w * (addr & 1);
         w *= 2;
         addr >>= 1;
@@ -302,8 +296,8 @@ string Cache::dec2Hex(unsigned int x) {
 
 
 void Cache::printCache() {
-    for (unsigned int setNum = 0; setNum < L1_GROUP_COUNT; setNum++) {
-        printSingleSet(setNum);
+    for (unsigned int i_set = 0; i_set < L1_GROUP_COUNT; i_set++) {
+        printSingleSet(i_set);
     }
 }
 
