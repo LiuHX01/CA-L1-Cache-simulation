@@ -41,20 +41,6 @@ Cache::Cache(int bsize, int size, int assoc, int repolicy, int wpolicy) {
     memset(L1_state, 0, sizeof(L1_state));
 
 
-    // cache状态
-    VALID = 0;
-    DIRTY = 1;
-    COUNT_BLOCK = 2;
-    COUNT_SET = 3;
-
-
-    // 一些参数
-    LRU = 0;
-    LFU = 1;
-    WBWA = 0;
-    WTNA = 1;
-
-
     // 统计量
     r_count = 0.0;
     r_miss_count = 0.0;

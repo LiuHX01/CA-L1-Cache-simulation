@@ -21,15 +21,18 @@ class Cache {
     unsigned int L1_set[1024][8];
     unsigned int L1_state[1024][8][4];
 
-    unsigned int VALID;  // 0可用 1占用
-    unsigned int DIRTY;  // 0不脏 1脏
-    unsigned int COUNT_BLOCK;
-    unsigned int COUNT_SET;
+    enum {
+        VALID = 0,  // 0为空 1被占用
+        DIRTY = 1,  // 0不脏 1脏
+        COUNT_BLOCK = 2,
+        COUNT_SET = 3,
 
-    unsigned int LRU;
-    unsigned int LFU;
-    unsigned int WBWA;
-    unsigned int WTNA;
+        LRU = 0,
+        LFU = 1,
+
+        WBWA = 0,
+        WTNA = 1
+    };
 
     double r_count;
     double r_miss_count;
