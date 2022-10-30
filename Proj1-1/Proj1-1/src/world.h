@@ -22,10 +22,15 @@ class Cache {
     unsigned int L1_state[1024][8][4];
 
     enum {
-        VALID = 0,  // 0为空 1被占用
-        DIRTY = 1,  // 0不脏 1脏
-        COUNT_BLOCK = 2,
-        COUNT_SET = 3,
+        VALID_INDEX = 0,  // 0为空 1被占用
+        DIRTY_INDEX = 1,  // 0不脏 1脏
+        COUNT_BLOCK_INDEX = 2,
+        COUNT_SET_INDEX = 3,
+
+        VALID = 1,
+        INVALID = 0,
+        NODIRTY = 0,
+        DIRTY = 1,
 
         LRU = 0,
         LFU = 1,

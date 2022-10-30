@@ -69,15 +69,15 @@ void Cache::read(unsigned int addr) {
 
         if (L1_REPLACEMENT_POLICY == LRU) {
             for (unsigned int i = 0; i < L1_ASSOC; i++) {  // 设置计数器 自己清零 其他被占用且比他小的+1
-                if (L1_state[index][i][VALID] == 1 && L1_state[index][i][COUNT_BLOCK] < L1_state[index][miss_hit.second][COUNT_BLOCK]) {
-                    L1_state[index][i][COUNT_BLOCK]++;
+                if (L1_state[index][i][VALID_INDEX] == VALID && L1_state[index][i][COUNT_BLOCK_INDEX] < L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX]) {
+                    L1_state[index][i][COUNT_BLOCK_INDEX]++;
                 }
             }
-            L1_state[index][miss_hit.second][COUNT_BLOCK] = 0;
+            L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX] = 0;
         }
         else {
             // 当一个块被引用时 其计数器自增1
-            L1_state[index][miss_hit.second][COUNT_BLOCK]++;
+            L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX]++;
         }
     }
     else {  // 未命中
@@ -91,32 +91,32 @@ void Cache::read(unsigned int addr) {
 
         // 更新内容 设置valid
         L1_set[index][miss_hit.second] = tag;
-        L1_state[index][miss_hit.second][VALID] = 1;
-        if (L1_state[index][miss_hit.second][DIRTY] == 1) {
+        L1_state[index][miss_hit.second][VALID_INDEX] = VALID;
+        if (L1_state[index][miss_hit.second][DIRTY_INDEX] == DIRTY) {
             wb_count++;
         }
-        L1_state[index][miss_hit.second][DIRTY] = 0;
+        L1_state[index][miss_hit.second][DIRTY_INDEX] = NODIRTY;
 
 
         if (L1_REPLACEMENT_POLICY == LRU) {
             for (unsigned int i = 0; i < L1_ASSOC; i++) {  // 设置计数器 自己清零 其他被占用的都+1
-                if (i != miss_hit.second && L1_state[index][i][VALID] == 1) {
-                    L1_state[index][i][COUNT_BLOCK]++;
+                if (i != miss_hit.second && L1_state[index][i][VALID_INDEX] == VALID) {
+                    L1_state[index][i][COUNT_BLOCK_INDEX]++;
                 }
             }
-            L1_state[index][miss_hit.second][COUNT_BLOCK] = 0;
+            L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX] = 0;
         }
         else {
-            unsigned int tmp = L1_state[index][miss_hit.second][COUNT_BLOCK];
+            unsigned int tmp = L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX];
             // 一个块调入时 其引用次数被初始化为COUNT_SET+1
-            // L1_state[index][miss_hit.second][COUNT_BLOCK] = L1_state[index][miss_hit.second][COUNT_SET] + 1;
+            // L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX] = L1_state[index][miss_hit.second][COUNT_SET_INDEX] + 1;
             // 如果有替换 该组COUNT_SET被设置为被替换块的COUNT_BLOCK
             if (have_replace) {
                 for (unsigned int i = 0; i < L1_ASSOC; i++) {
-                    L1_state[index][i][COUNT_SET] = tmp;
+                    L1_state[index][i][COUNT_SET_INDEX] = tmp;
                 }
             }
-            L1_state[index][miss_hit.second][COUNT_BLOCK] = L1_state[index][miss_hit.second][COUNT_SET] + 1;
+            L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX] = L1_state[index][miss_hit.second][COUNT_SET_INDEX] + 1;
         }
     }
 
@@ -139,18 +139,18 @@ void Cache::write(unsigned int addr) {
 
         if (L1_REPLACEMENT_POLICY == LRU) {  // 设置计数器 自己清零 比他小的+1
             for (unsigned int i = 0; i < L1_ASSOC; i++) {
-                if (L1_state[index][i][VALID] == 1 && L1_state[index][i][COUNT_BLOCK] < L1_state[index][miss_hit.second][COUNT_BLOCK]) {
-                    L1_state[index][i][COUNT_BLOCK]++;
+                if (L1_state[index][i][VALID_INDEX] == VALID && L1_state[index][i][COUNT_BLOCK_INDEX] < L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX]) {
+                    L1_state[index][i][COUNT_BLOCK_INDEX]++;
                 }
             }
-            L1_state[index][miss_hit.second][COUNT_BLOCK] = 0;
+            L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX] = 0;
         }
         else {
             // 当一个块被引用时 其计数器自增1
-            L1_state[index][miss_hit.second][COUNT_BLOCK]++;
+            L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX]++;
         }
         if (L1_WRITE_POLICY == WBWA) {  // 设置脏位
-            L1_state[index][miss_hit.second][DIRTY] = 1;
+            L1_state[index][miss_hit.second][DIRTY_INDEX] = DIRTY;
         }
     }
     else if (miss_hit.first == false) {  // 未命中 且不是WTNA
@@ -166,35 +166,35 @@ void Cache::write(unsigned int addr) {
 
             // 更新内容 设置valid
             L1_set[index][miss_hit.second] = tag;
-            L1_state[index][miss_hit.second][VALID] = 1;
+            L1_state[index][miss_hit.second][VALID_INDEX] = VALID;
 
-            if (L1_state[index][miss_hit.second][DIRTY] == 1) {
+            if (L1_state[index][miss_hit.second][DIRTY_INDEX] == DIRTY) {
                 wb_count++;
             }
 
             // 设置计数器 自己清零 其他都+1
             if (L1_REPLACEMENT_POLICY == LRU) {
                 for (unsigned int i = 0; i < L1_ASSOC; i++) {
-                    if (i != miss_hit.second && L1_state[index][i][VALID] == 1) {
-                        L1_state[index][i][COUNT_BLOCK]++;
+                    if (i != miss_hit.second && L1_state[index][i][VALID_INDEX] == VALID) {
+                        L1_state[index][i][COUNT_BLOCK_INDEX]++;
                     }
-                    L1_state[index][miss_hit.second][COUNT_BLOCK] = 0;
+                    L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX] = 0;
                 }
             }
             else {
-                unsigned int tmp = L1_state[index][miss_hit.second][COUNT_BLOCK];
+                unsigned int tmp = L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX];
                 // 一个块调入时 其引用次数被初始化为COUNT_SET+1
-                // L1_state[index][miss_hit.second][COUNT_BLOCK] = L1_state[index][miss_hit.second][COUNT_SET] + 1;
+                // L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX] = L1_state[index][miss_hit.second][COUNT_SET_INDEX] + 1;
                 // 如果有替换 该组COUNT_SET被设置为被替换块的COUNT_BLOCK
                 if (have_replace) {
                     for (unsigned int i = 0; i < L1_ASSOC; i++) {
-                        L1_state[index][i][COUNT_SET] = tmp;
+                        L1_state[index][i][COUNT_SET_INDEX] = tmp;
                     }
                 }
-                L1_state[index][miss_hit.second][COUNT_BLOCK] = L1_state[index][miss_hit.second][COUNT_SET] + 1;
+                L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX] = L1_state[index][miss_hit.second][COUNT_SET_INDEX] + 1;
             }
             // 设置脏位
-            L1_state[index][miss_hit.second][DIRTY] = 1;
+            L1_state[index][miss_hit.second][DIRTY_INDEX] = DIRTY;
         }
     }
 
@@ -265,8 +265,8 @@ unsigned int Cache::selectReplaced(unsigned int index) {
     if (L1_REPLACEMENT_POLICY == LRU) {
         unsigned int count = 0;
         for (unsigned int i = 0; i < L1_ASSOC; i++) {
-            if (L1_state[index][i][COUNT_BLOCK] > count) {
-                count = L1_state[index][i][COUNT_BLOCK];
+            if (L1_state[index][i][COUNT_BLOCK_INDEX] > count) {
+                count = L1_state[index][i][COUNT_BLOCK_INDEX];
                 ret = i;
             }
         }
@@ -274,8 +274,8 @@ unsigned int Cache::selectReplaced(unsigned int index) {
     else {
         unsigned int count = 0xffffffffu;
         for (unsigned int i = 0; i < L1_ASSOC; i++) {
-            if (L1_state[index][i][COUNT_BLOCK] < count) {
-                count = L1_state[index][i][COUNT_BLOCK];
+            if (L1_state[index][i][COUNT_BLOCK_INDEX] < count) {
+                count = L1_state[index][i][COUNT_BLOCK_INDEX];
                 ret = i;
             }
         }
@@ -312,12 +312,12 @@ void Cache::printSingleSet(unsigned int index) {
     cout << "set";
     cout << setiosflags(ios::right) << setw(4) << index << ":";
     for (unsigned int i = 0; i < L1_ASSOC; i++) {
-        if (L1_state[index][i][VALID] == 0) {
+        if (L1_state[index][i][VALID_INDEX] == INVALID) {
             cout << "-\t";
         }
         else {
             cout << setiosflags(ios::right) << setw(8) << dec2Hex(L1_set[index][i]);
-            if (L1_state[index][i][DIRTY] == 1) {
+            if (L1_state[index][i][DIRTY_INDEX] == DIRTY) {
                 cout << " D";
             }
             else {
