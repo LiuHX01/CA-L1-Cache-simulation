@@ -18,8 +18,10 @@ class Cache {
     unsigned int L1_GROUP_BIT_COUNT;      // 中
     unsigned int L1_BLOCKSIZE_BIT_COUNT;  // 低
 
-    unsigned int L1_set[1024][8];
-    unsigned int L1_state[1024][8][4];
+    // unsigned int L1_set[1024][8];
+    // unsigned int L1_state[1024][8][4];
+    unsigned int** L1_set;
+    unsigned int*** L1_state;
 
     enum {
         VALID_INDEX = 0,
@@ -56,6 +58,8 @@ class Cache {
 
   public:
     Cache(int bsize, int size, int assoc, int repolicy, int wpolicy);  // 构造函数
+    ~Cache();
+
     void read(unsigned int addr);
     void write(unsigned int addr);
 

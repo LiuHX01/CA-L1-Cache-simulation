@@ -22,8 +22,24 @@ Cache::Cache(int bsize, int size, int assoc, int repolicy, int wpolicy) :
     L1_TAG_BIT_COUNT = 32 - L1_BLOCKSIZE_BIT_COUNT - L1_GROUP_BIT_COUNT;
 
     // cache及其状态初始化
-    memset(L1_set, 0, sizeof(L1_set));
-    memset(L1_state, 0, sizeof(L1_state));
+    // memset(L1_set, 0, sizeof(L1_set));
+    // memset(L1_state, 0, sizeof(L1_state));
+    L1_set = new unsigned int*[L1_GROUP_COUNT + 1];
+    for (unsigned int i = 0; i < L1_GROUP_COUNT + 1; i++) {
+        L1_set[i] = new unsigned int[L1_ASSOC + 1];
+        for (unsigned int j = 0; j < L1_ASSOC + 1; j++)
+            L1_set[i][j] = 0;
+    }
+    L1_state = new unsigned int**[L1_GROUP_COUNT + 1];
+    for (unsigned int i = 0; i < L1_GROUP_COUNT + 1; i++) {
+        L1_state[i] = new unsigned int*[L1_ASSOC + 1];
+        for (unsigned int j = 0; j < L1_ASSOC + 1; j++) {
+            L1_state[i][j] = new unsigned int[4];
+            for (unsigned int k = 0; k < 4; k++)
+                L1_state[i][j][k] = 0;
+        }
+    }
+
 
     // 统计量
     r_count = 0.0;
@@ -31,6 +47,21 @@ Cache::Cache(int bsize, int size, int assoc, int repolicy, int wpolicy) :
     w_count = 0.0;
     w_miss_count = 0.0;
     wb_count = 0.0;
+}
+
+
+// 析构函数 主要是释放动态数组
+Cache::~Cache() {
+    for (unsigned int i = 0; i < L1_GROUP_COUNT + 1; i++)
+        delete[] L1_set[i];
+    delete[] L1_set;
+
+    for (unsigned int i = 0; i < L1_GROUP_COUNT + 1; i++) {
+        for (unsigned int j = 0; j < L1_ASSOC + 1; j++)
+            delete[] L1_state[i][j];
+        delete[] L1_state[i];
+    }
+    delete[] L1_state;
 }
 
 
