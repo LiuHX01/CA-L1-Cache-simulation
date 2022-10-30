@@ -31,157 +31,83 @@ Cache::Cache(int bsize, int size, int assoc, int repolicy, int wpolicy) :
     w_count = 0.0;
     w_miss_count = 0.0;
     wb_count = 0.0;
-
-    // debug用
-    DEBUG = false;
 }
 
 
+// 读
 void Cache::read(unsigned int addr) {
     r_count++;
-    unsigned int tag = getTag(addr);  // 得到信息
+    unsigned int tag = getTag(addr);
     unsigned int index = getIndex(addr);
-    if (DEBUG) printSingleSet(index);
 
-    std::pair<bool, unsigned int> miss_hit = missOrHit(index, tag);  // 判断命中情况
+    std::pair<bool, unsigned int> miss_hit = missOrHit(index, tag);
+    bool have_replace = false;
 
-    if (miss_hit.first == true) {  // 命中
-        if (DEBUG) cout << "L1 HIT" << endl;
-
-        L1_set[index][miss_hit.second] = tag;  // 更新内容
-
-        if (L1_REPLACEMENT_POLICY == LRU) {
-            for (unsigned int i = 0; i < L1_ASSOC; i++) {  // 设置计数器 自己清零 其他被占用且比他小的+1
-                if (L1_state[index][i][VALID_INDEX] == VALID && L1_state[index][i][COUNT_BLOCK_INDEX] < L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX]) {
-                    L1_state[index][i][COUNT_BLOCK_INDEX]++;
-                }
-            }
-            L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX] = 0;
-        }
-        else {
-            // 当一个块被引用时 其计数器自增1
-            L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX]++;
-        }
+    // hit
+    if (miss_hit.first == true) {
+        L1_set[index][miss_hit.second] = tag;
+        updateCounter(miss_hit.first, index, miss_hit.second, have_replace, 0);
     }
-    else {  // 未命中
+    // miss
+    else {
         r_miss_count++;
-        if (DEBUG) cout << "L1 MISS" << endl;
-        bool have_replace = false;
-        if (miss_hit.second == L1_ASSOC) {  // 无空位
+
+        // 没有空位 寻找替换
+        if (miss_hit.second == L1_ASSOC) {
             have_replace = true;
             miss_hit.second = selectReplaced(index);
         }
 
-        // 更新内容 设置valid
+        // 更新内容 设置valid dirty
         L1_set[index][miss_hit.second] = tag;
         L1_state[index][miss_hit.second][VALID_INDEX] = VALID;
-        if (L1_state[index][miss_hit.second][DIRTY_INDEX] == DIRTY) {
+        if (L1_state[index][miss_hit.second][DIRTY_INDEX] == DIRTY)
             wb_count++;
-        }
         L1_state[index][miss_hit.second][DIRTY_INDEX] = NO_DIRTY;
 
-
-        if (L1_REPLACEMENT_POLICY == LRU) {
-            for (unsigned int i = 0; i < L1_ASSOC; i++) {  // 设置计数器 自己清零 其他被占用的都+1
-                if (i != miss_hit.second && L1_state[index][i][VALID_INDEX] == VALID) {
-                    L1_state[index][i][COUNT_BLOCK_INDEX]++;
-                }
-            }
-            L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX] = 0;
-        }
-        else {
-            unsigned int tmp = L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX];
-            // 一个块调入时 其引用次数被初始化为COUNT_SET+1
-            // L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX] = L1_state[index][miss_hit.second][COUNT_SET_INDEX] + 1;
-            // 如果有替换 该组COUNT_SET被设置为被替换块的COUNT_BLOCK
-            if (have_replace) {
-                for (unsigned int i = 0; i < L1_ASSOC; i++) {
-                    L1_state[index][i][COUNT_SET_INDEX] = tmp;
-                }
-            }
-            L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX] = L1_state[index][miss_hit.second][COUNT_SET_INDEX] + 1;
-        }
+        updateCounter(miss_hit.first, index, miss_hit.second, have_replace, 0);
     }
-
     return;
 }
 
 
+// 写
 void Cache::write(unsigned int addr) {
     w_count++;
-    unsigned int tag = getTag(addr);  // 得到信息
+    unsigned int tag = getTag(addr);
     unsigned int index = getIndex(addr);
-    if (DEBUG) printSingleSet(index);
 
-    std::pair<bool, unsigned int> miss_hit = missOrHit(index, tag);  // 判断命中情况
+    std::pair<bool, unsigned int> miss_hit = missOrHit(index, tag);
+    bool have_replace = false;
 
-    if (miss_hit.first == true) {  // 命中
-        if (DEBUG) cout << "L1 HIT" << endl;
+    // hit
+    if (miss_hit.first == true) {
+        L1_set[index][miss_hit.second] = tag;
+        updateCounter(miss_hit.first, index, miss_hit.second, have_replace, 1);
 
-        L1_set[index][miss_hit.second] = tag;  // 更新内容
-
-        if (L1_REPLACEMENT_POLICY == LRU) {  // 设置计数器 自己清零 比他小的+1
-            for (unsigned int i = 0; i < L1_ASSOC; i++) {
-                if (L1_state[index][i][VALID_INDEX] == VALID && L1_state[index][i][COUNT_BLOCK_INDEX] < L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX]) {
-                    L1_state[index][i][COUNT_BLOCK_INDEX]++;
-                }
-            }
-            L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX] = 0;
-        }
-        else {
-            // 当一个块被引用时 其计数器自增1
-            L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX]++;
-        }
-        if (L1_WRITE_POLICY == WBWA) {  // 设置脏位
+        if (L1_WRITE_POLICY == WBWA)
             L1_state[index][miss_hit.second][DIRTY_INDEX] = DIRTY;
-        }
     }
-    else if (miss_hit.first == false) {  // 未命中 且不是WTNA
+    // miss 若是WTNA Cache不分配
+    else {
         w_miss_count++;
         if (L1_WRITE_POLICY == WBWA) {
-            if (DEBUG) cout << "L1 MISS" << endl;
-
-            bool have_replace = false;
-            if (miss_hit.second == L1_ASSOC) {  // 无空位
+            // 没有空位 寻找替换
+            if (miss_hit.second == L1_ASSOC) {
                 have_replace = true;
                 miss_hit.second = selectReplaced(index);
             }
 
-            // 更新内容 设置valid
+            // 更新内容 设置valid dirty
             L1_set[index][miss_hit.second] = tag;
             L1_state[index][miss_hit.second][VALID_INDEX] = VALID;
-
-            if (L1_state[index][miss_hit.second][DIRTY_INDEX] == DIRTY) {
+            if (L1_state[index][miss_hit.second][DIRTY_INDEX] == DIRTY)
                 wb_count++;
-            }
-
-            // 设置计数器 自己清零 其他都+1
-            if (L1_REPLACEMENT_POLICY == LRU) {
-                for (unsigned int i = 0; i < L1_ASSOC; i++) {
-                    if (i != miss_hit.second && L1_state[index][i][VALID_INDEX] == VALID) {
-                        L1_state[index][i][COUNT_BLOCK_INDEX]++;
-                    }
-                    L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX] = 0;
-                }
-            }
-            else {
-                unsigned int tmp = L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX];
-                // 一个块调入时 其引用次数被初始化为COUNT_SET+1
-                // L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX] = L1_state[index][miss_hit.second][COUNT_SET_INDEX] + 1;
-                // 如果有替换 该组COUNT_SET被设置为被替换块的COUNT_BLOCK
-                if (have_replace) {
-                    for (unsigned int i = 0; i < L1_ASSOC; i++) {
-                        L1_state[index][i][COUNT_SET_INDEX] = tmp;
-                    }
-                }
-                L1_state[index][miss_hit.second][COUNT_BLOCK_INDEX] = L1_state[index][miss_hit.second][COUNT_SET_INDEX] + 1;
-            }
-            // 设置脏位
             L1_state[index][miss_hit.second][DIRTY_INDEX] = DIRTY;
+
+            updateCounter(miss_hit.first, index, miss_hit.second, have_replace, 1);
         }
     }
-
-    if (DEBUG) printSingleSet(index);
     return;
 }
 
@@ -203,30 +129,28 @@ unsigned int Cache::getIndex(unsigned int addr) {
     for (unsigned int i = 0; i < L1_BLOCKSIZE_BIT_COUNT; i++) {
         addr >>= 1;
     }
-    int w = 1;
+    unsigned int w = 1;
     for (unsigned int i = 0; i < L1_GROUP_BIT_COUNT; i++) {
         ret += w * (addr & 1);
         w *= 2;
         addr >>= 1;
     }
-    if (DEBUG) cout << "index " << ret << ")" << endl;
     return ret;
 }
 
 
-// 得到tag(内容)
+// 得到tag
 unsigned int Cache::getTag(unsigned int addr) {
     unsigned int ret = 0;
     for (unsigned int i = 0; i < L1_BLOCKSIZE_BIT_COUNT + L1_GROUP_BIT_COUNT; i++) {
         addr >>= 1;
     }
-    int w = 1;
+    unsigned int w = 1;
     for (unsigned int i = 0; i < L1_TAG_BIT_COUNT; i++) {
         ret += w * (addr & 1);
         w *= 2;
         addr >>= 1;
     }
-    if (DEBUG) cout << "(tag " << dec2Hex(ret) << ", ";
     return ret;
 }
 
@@ -236,19 +160,20 @@ std::pair<bool, unsigned int> Cache::missOrHit(unsigned int index, unsigned int 
     std::pair<bool, unsigned int> ret(false, L1_ASSOC);
     // 对比该组每个块
     for (unsigned int i = 0; i < L1_ASSOC; i++) {
-        if (L1_state[index][i][0] == 0) {  // 首先valid 记录第一个空位
+        // 若空 记录第一个空位
+        if (L1_state[index][i][VALID_INDEX] == INVALID) {
             if (i < ret.second) {
                 ret.second = i;
             }
         }
-        else if (L1_set[index][i] == tag) {  // 不空且命中，直接返回位置
+        // 不空且命中，直接返回位置
+        else if (L1_state[index][i][VALID_INDEX] == VALID && L1_set[index][i] == tag) {
             ret.first = true;
             ret.second = i;
             return ret;
         }
-        else {  // 不空且未命中，跳过
-        }
     }
+    // 此时miss
     return ret;
 }
 
@@ -278,6 +203,49 @@ unsigned int Cache::selectReplaced(unsigned int index) {
 }
 
 
+// 更新计数器
+void Cache::updateCounter(bool is_hit, unsigned int index, unsigned int nth_block, bool have_replace, int wr_type) {
+    if (is_hit) {
+        // 设置计数器 自己清零 比他小的+1
+        if (L1_REPLACEMENT_POLICY == LRU) {
+            for (unsigned int i = 0; i < L1_ASSOC; i++) {
+                if (L1_state[index][i][VALID_INDEX] == VALID && L1_state[index][i][COUNT_BLOCK_INDEX] < L1_state[index][nth_block][COUNT_BLOCK_INDEX]) {
+                    L1_state[index][i][COUNT_BLOCK_INDEX]++;
+                }
+            }
+            L1_state[index][nth_block][COUNT_BLOCK_INDEX] = 0;
+        }
+        else {
+            // 当一个块被引用时 其计数器自增1
+            L1_state[index][nth_block][COUNT_BLOCK_INDEX]++;
+        }
+    }
+    else if (wr_type == 0 || (wr_type == 1 && L1_WRITE_POLICY == WBWA)) {
+        if (L1_REPLACEMENT_POLICY == LRU) {
+            for (unsigned int i = 0; i < L1_ASSOC; i++) {
+                if (i != nth_block && L1_state[index][i][VALID_INDEX] == VALID) {
+                    L1_state[index][i][COUNT_BLOCK_INDEX]++;
+                }
+            }
+            L1_state[index][nth_block][COUNT_BLOCK_INDEX] = 0;
+        }
+        else {
+            unsigned int tmp = L1_state[index][nth_block][COUNT_BLOCK_INDEX];
+            // 一个块调入时 其引用次数被初始化为COUNT_SET+1
+            // 如果有替换 该组COUNT_SET被设置为被替换块的COUNT_BLOCK
+            if (have_replace) {
+                for (unsigned int i = 0; i < L1_ASSOC; i++) {
+                    L1_state[index][i][COUNT_SET_INDEX] = tmp;
+                }
+            }
+            L1_state[index][nth_block][COUNT_BLOCK_INDEX] = L1_state[index][nth_block][COUNT_SET_INDEX] + 1;
+        }
+    }
+    return;
+}
+
+
+// 最后输出用10-16进制转换
 string Cache::dec2Hex(unsigned int x) {
     string s;
     while (x) {
@@ -295,6 +263,7 @@ string Cache::dec2Hex(unsigned int x) {
 }
 
 
+// 以下全是输出
 void Cache::printCache() {
     for (unsigned int i_set = 0; i_set < L1_GROUP_COUNT; i_set++) {
         printSingleSet(i_set);

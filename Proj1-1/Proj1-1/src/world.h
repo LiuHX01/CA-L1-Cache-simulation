@@ -45,14 +45,13 @@ class Cache {
     double w_miss_count;
     double wb_count;
 
-    bool DEBUG;
-
     unsigned int calcBitCount(unsigned int x);
     unsigned int getIndex(unsigned int addr);
     unsigned int getTag(unsigned int addr);
     pair<bool, unsigned int> missOrHit(unsigned int index, unsigned int tag);
     unsigned int selectReplaced(unsigned int index);
     string dec2Hex(unsigned int x);
+    void updateCounter(bool is_hit, unsigned int index, unsigned int nth_block, bool have_replace, int wr_type);
 
 
   public:
